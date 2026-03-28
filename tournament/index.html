@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🏆 토너먼트</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #0f0f1a; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; min-height: 100vh; }
+nav { display: flex; background: #1a1a2e; border-bottom: 1px solid #2a2a4a; }
+nav button { flex: 1; padding: 13px; background: none; border: none; color: #888; font-size: 0.9rem; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.2s; }
+nav button.active { color: #7c83fd; border-bottom-color: #7c83fd; }
+.page { display: none; padding: 18px; max-width: 960px; margin: 0 auto; }
+.page.active { display: block; }
+h2 { color: #7c83fd; margin-bottom: 14px; font-size: 1.05rem; }
+button { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.88rem; transition: all 0.2s; }
+.btn-p { background: #7c83fd; color: #fff; } .btn-p:hover { background: #5a63f5; }
+.btn-g { background: #2d6a2d; color: #7dff7d; border: 1px solid #3d8a3d; } .btn-g:hover { background: #3d8a3d; }
+.btn-r { background: #6a2d2d; color: #ff9d9d; border: 1px solid #8a3d3d; } .btn-r:hover { background: #8a3d3d; }
+.btn-s { padding: 5px 11px; font-size: 0.78rem; background: #2a2a4a; color: #ccc; border: 1px solid #3a3a5a; } .btn-s:hover { background: #3a3a5a; }
+input[type=text], select { padding: 8px 12px; background: #0f0f1a; border: 1px solid #3a3a5a; border-radius: 6px; color: #e0e0e0; font-size: 0.88rem; }
+input[type=text]:focus, select:focus { outline: none; border-color: #7c83fd; }
+select option { background: #1a1a2e; }
+.err { color: #e05c5c; font-size: 0.8rem; margin-top: 3px; min-height: 16px; }
+.card { background: #1a1a2e; border: 1px solid #2a2a4a; border-radius: 10px; padding: 14px 18px; }
+.room-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; }
+.room-card { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.room-name { font-size: 0.98rem; font-weight: bold; }
+.room-meta { color: #888; font-size: 0.78rem; margin-top: 2px; }
+.badge { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 0.72rem; font-weight: bold; }
+.bw { background: #2a3a5a; color: #7c83fd; } .bp { background: #2a4a2a; color: #4caf50; } .bf { background: #3a2a2a; color: #e05c5c; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.chip { background: #2a2a4a; border: 1px solid #3a3a5a; border-radius: 20px; padding: 3px 11px; font-size: 0.8rem; }
+.chip.me { border-color: #7c83fd; color: #7c83fd; }
+.b-round { margin-bottom: 10px; }
+.b-rtitle { font-size: 0.7rem; color: #7c83fd; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; padding: 2px 7px; background: #1a1a2e; border-radius: 4px; display: inline-block; }
+.b-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.b-match { background: #1a1a2e; border: 1px solid #2a2a4a; border-radius: 6px; overflow: hidden; min-width: 120px; }
+.b-p { padding: 5px 9px; font-size: 0.78rem; white-space: nowrap; }
+.b-p + .b-p { border-top: 1px solid #2a2a4a; }
+.b-p.winner { background: #1a3a1a; color: #4caf50; font-weight: bold; }
+.b-p.loser { color: #555; text-decoration: line-through; }
+.b-p.bye { color: #4caf50; font-style: italic; }
+.b-p.empty { color: #444; font-style: italic; }
+.b-p.choosing { background: #2a2a1a; color: #ffd700; }
+.game-box { background: #1a1a2e; border-radius: 12px; padding: 24px; text-align: center; max-width: 460px; margin: 0 auto; }
+.vs-row { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 14px 0; }
+.pname { font-size: 1.05rem; font-weight: bold; }
+.rps-btns { display: flex; justify-content: center; gap: 10px; margin: 14px 0; flex-wrap: wrap; }
+.rps-btn { font-size: 1.8rem; padding: 10px 14px; background: #2a2a4a; border: 2px solid #3a3a5a; border-radius: 10px; cursor: pointer; transition: all 0.2s; }
+.rps-btn:hover:not(:disabled) { border-color: #7c83fd; transform: scale(1.1); }
+.rps-btn:disabled { opacity: 0.4; cursor: default; }
+.rps-btn.selected { border-color: #7c83fd; background: #2a2a5a; }
+.turn-label { color: #7c83fd; font-size: 0.85rem; margin-bottom: 5px; }
+.result-msg { font-size: 0.95rem; margin: 10px 0; min-height: 22px; }
+.result-msg.win { color: #4caf50; } .result-msg.draw { color: #ffd700; }
+.waiting-msg { color: #888; font-size: 0.85rem; margin-top: 8px; }
+.champ-box { text-align: center; padding: 28px 16px; }
+.champ-box .trophy { font-size: 3rem; }
+.champ-box .cname { font-size: 1.6rem; color: #ffd700; font-weight: bold; margin-top: 8px; }
+.result-round { margin-bottom: 12px; }
+.result-round h3 { color: #7c83fd; font-size: 0.82rem; margin-bottom: 5px; border-bottom: 1px solid #2a2a4a; padding-bottom: 2px; }
+.result-item { display: flex; justify-content: space-between; padding: 4px 9px; background: #1a1a2e; border-radius: 4px; margin-bottom: 2px; font-size: 0.8rem; }
+.w { color: #4caf50; font-weight: bold; }
+.empty-msg { color: #555; text-align: center; padding: 36px; }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.name-banner { background: #1a1a2e; border-bottom: 1px solid #2a2a4a; padding: 8px 18px; font-size: 0.82rem; color: #888; display: flex; align-items: center; gap: 10px; }
+.name-banner span { color: #7c83fd; font-weight: bold; }
+.overlay { position: fixed; inset: 0; background: #0f0f1a; z-index: 999; display: flex; align-items: center; justify-content: center; }
+.name-modal { background: #1a1a2e; border: 1px solid #3a3a5a; border-radius: 14px; padding: 36px 32px; text-align: center; min-width: 300px; }
+.name-modal h2 { color: #7c83fd; margin-bottom: 8px; font-size: 1.3rem; }
+.name-modal p { color: #888; font-size: 0.85rem; margin-bottom: 20px; }
+.name-modal input { width: 100%; padding: 11px 14px; margin-bottom: 8px; font-size: 1rem; }
+</style>
+</head>
+<body>
+
+<!-- 이름 입력 모달 -->
+<div class="overlay" id="nameOverlay">
+  <div class="name-modal">
+    <div style="font-size:2.5rem;margin-bottom:10px">🏆</div>
+    <h2>토너먼트</h2>
+    <p>시작하기 전에 이름을 입력해주세요</p>
+    <input type="text" id="initNameInput" placeholder="이름 입력" onkeydown="if(event.key==='Enter')submitInitName()">
+    <div class="err" id="initNameErr"></div>
+    <button class="btn-p" style="width:100%;padding:11px;font-size:1rem;margin-top:4px" onclick="submitInitName()">시작하기</button>
+  </div>
+</div>
+
+<div class="name-banner" id="nameBanner">
+  내 이름: <span id="myNameDisplay">-</span>
+</div>
+
+<nav>
+  <button class="active" onclick="goTab('lobby')">🏠 로비</button>
+  <button onclick="goTab('game')" id="tabGame">⚔️ 게임</button>
+  <button onclick="goTab('finished')">📋 종료된 게임</button>
+  <button onclick="goTab('profile')">👤 이름 변경</button>
+</nav>
+
+<div class="page active" id="page-lobby">
+  <h2>토너먼트 방 목록</h2>
+  <div class="card" style="margin-bottom:14px">
+    <div class="row" style="margin-bottom:8px">
+      <input type="text" id="roomNameInput" placeholder="방 이름" style="flex:1;min-width:140px" onkeydown="if(event.key==='Enter')createRoom()">
+      <select id="gameTypeSelect">
+        <option value="rps">✊ 가위바위보</option>
+        <option value="chito">⚔️ 치토 배틀</option>
+      </select>
+      <span id="testModeWrap" style="display:none;align-items:center;gap:5px;font-size:0.82rem;color:#ffd700">
+        <input type="checkbox" id="testModeCheck"> 테스트 모드
+      </span>
+      <button class="btn-p" onclick="createRoom()">방 만들기</button>
+    </div>
+  </div>
+  <div class="room-list" id="roomList"><div class="empty-msg">불러오는 중...</div></div>
+</div>
+
+<div class="page" id="page-game">
+  <div id="gameContent"><div class="empty-msg">방을 선택해주세요.</div></div>
+</div>
+
+<div class="page" id="page-finished">
+  <h2>종료된 게임</h2>
+  <div id="finishedList"><div class="empty-msg">불러오는 중...</div></div>
+</div>
+
+<div class="page" id="page-profile">
+  <h2>이름 변경</h2>
+  <div class="card" style="max-width:360px">
+    <div class="row">
+      <input type="text" id="newNameInput" placeholder="새 이름 입력" style="flex:1">
+      <button class="btn-p" onclick="changeName()">변경</button>
+    </div>
+    <div class="err" id="nameErr"></div>
+  </div>
+</div>
+
+<script>
+const API = 'https://8odj4wd9zc.execute-api.us-east-1.amazonaws.com/prod';
+const RPS = ['✊','✌️','🖐️'];
+function rpsLabel(s){ return {'✊':'주먹','✌️':'가위','🖐️':'보'}[s]||s; }
+
+let myName = localStorage.getItem('myName') || '';
+let currentRoomId = null;
+let pollTimer = null;
+let myChoice = null;
+let testMode = false;       // 테스트 모드 여부
+let testPlayers = [];       // 테스트 모드 참가자 목록
+let testTurnIdx = 0;        // 현재 입력 차례 인덱스
+
+const isAdmin = () => myName.endsWith('_admin');
+const displayName = (n) => n.endsWith('_admin') ? n.slice(0, -6) : n;
+
+function updateNameBanner() {
+  document.getElementById('myNameDisplay').textContent = displayName(myName) + (isAdmin() ? ' 👑' : '') || '(미설정)';
+}
+
+function submitInitName() {
+  const n = document.getElementById('initNameInput').value.trim();
+  const err = document.getElementById('initNameErr');
+  if (!n) { err.textContent = '이름을 입력해주세요'; return; }
+  myName = n;
+  localStorage.setItem('myName', myName);
+  updateNameBanner();
+  document.getElementById('nameOverlay').style.display = 'none';
+  goTab('lobby');
+}
+
+// 이름 있으면 모달 숨기기
+if (myName) {
+  document.getElementById('nameOverlay').style.display = 'none';
+  updateNameBanner();
+}
+
+function ensureName() {
+  return !!myName;
+}
+
+function changeName() {
+  const n = document.getElementById('newNameInput').value.trim();
+  const err = document.getElementById('nameErr');
+  if (!n) { err.textContent = '이름을 입력하세요'; return; }
+  myName = n;
+  localStorage.setItem('myName', myName);
+  updateNameBanner();
+  err.textContent = '';
+  document.getElementById('newNameInput').value = '';
+  alert(`이름이 "${myName}"으로 변경됐습니다.`);
+}
+
+function goTab(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  const tabs = ['lobby','game','finished','profile'];
+  document.querySelectorAll('nav button')[tabs.indexOf(id)].classList.add('active');
+  if (id === 'lobby') {
+    document.getElementById('testModeWrap').style.display = isAdmin() ? 'flex' : 'none';
+    loadRooms();
+  }
+  if (id === 'finished') loadFinished();
+  if (id === 'game' && currentRoomId) pollRoom();
+}
+
+async function api(method, path, body) {
+  const r = await fetch(API + path, {
+    method,
+    headers: {'Content-Type': 'application/json'},
+    body: (body !== undefined) ? JSON.stringify(body) : undefined
+  });
+  return r.json();
+}
+
+async function loadRooms() {
+  const rooms = await api('GET', '/rooms');
+  const active = rooms.filter(r => r.status !== 'finished');
+  const el = document.getElementById('roomList');
+  if (!active.length) { el.innerHTML = '<div class="empty-msg">진행 중인 방이 없습니다.</div>'; return; }
+  el.innerHTML = active.map(r => {
+    const inRoom = r.players.includes(myName);
+    const rightBtns = r.status === 'waiting'
+      ? (inRoom
+          ? `<button class="btn-r btn-s" onclick="leaveRoom('${r.room_id}')">참가취소</button>`
+          : `<button class="btn-s" onclick="joinRoom('${r.room_id}')">참가</button>`)
+      : `<button class="btn-s" onclick="enterRoom('${r.room_id}')">입장</button>`;
+    const delBtn = isAdmin() ? `<button class="btn-r btn-s" onclick="deleteRoom('${r.room_id}')">삭제</button>` : '';
+    const testTag = r.game_type === 'test' ? ' <span style="color:#ffd700;font-size:0.72rem">[테스트]</span>' : '';
+    return `<div class="card room-card">
+      <div style="display:flex;gap:6px;align-items:center">
+        ${delBtn}
+      </div>
+      <div style="flex:1">
+        <div class="room-name">${r.name}${testTag} <span style="color:#888;font-size:0.75rem">[${{'rps':'가위바위보','test':'가위바위보','chito':'치토 배틀'}[r.game_type]||r.game_type}]</span></div>
+        <div class="room-meta">참가자 ${r.players.length}명 · ${r.room_id}</div>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="badge ${r.status==='waiting'?'bw':r.status==='playing'?'bp':'bf'}">${{waiting:'대기중',playing:'진행중',finished:'종료'}[r.status]}</span>
+        ${rightBtns}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function deleteRoom(roomId) {
+  if (!confirm('방을 삭제할까요?')) return;
+  const res = await api('DELETE', `/rooms/${roomId}`, {requester: myName});
+  if (res.error) { alert(res.error); return; }
+  if (currentRoomId === roomId) { currentRoomId = null; stopPoll(); }
+  loadRooms();
+}
+
+async function loadFinished() {
+  const rooms = await api('GET', '/rooms');
+  const done = rooms.filter(r => r.status === 'finished');
+  const el = document.getElementById('finishedList');
+  if (!done.length) { el.innerHTML = '<div class="empty-msg">종료된 게임이 없습니다.</div>'; return; }
+  el.innerHTML = done.map(r => {
+    const champ = r.rounds?.length ? r.rounds[r.rounds.length-1][0]?.winner : '-';
+    return `<div class="card room-card" style="cursor:pointer" onclick="showFinished('${r.room_id}')">
+      <div><div class="room-name">${r.name}</div><div class="room-meta">참가자 ${r.players.length}명</div></div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span class="badge bf">종료</span>
+        <span style="color:#ffd700;font-weight:bold">🏆 ${champ||'-'}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function showFinished(roomId) {
+  const room = await api('GET', `/rooms/${roomId}`);
+  const champ = room.rounds[room.rounds.length-1][0]?.winner;
+  document.getElementById('finishedList').innerHTML = `
+    <button class="btn-s" onclick="loadFinished()" style="margin-bottom:12px">← 목록</button>
+    <div class="champ-box"><div class="trophy">🏆</div><div class="cname">${champ}</div>
+    <div style="color:#888;font-size:0.82rem;margin-top:4px">${room.name} 우승자</div></div>
+    ${resultHTML(room.rounds)}`;
+}
+
+function resultHTML(rounds) {
+  return rounds.map((round, ri) => `
+    <div class="result-round"><h3>${rname(ri, rounds.length)}</h3>
+    ${round.filter(m=>m.winner).map(m => {
+      const loser = m.winner===m.p1?m.p2:m.p1;
+      const log = m.log?.length ? m.log.map(l=>`${l.c1}vs${l.c2}`).join(', ') : '부전승';
+      return `<div class="result-item"><span><span class="w">${m.winner}</span> vs ${loser||'-'}</span><span>${log}</span></div>`;
+    }).join('')}</div>`).join('');
+}
+
+function rname(ri, total) {
+  const f = total-1-ri;
+  return ['결승','준결승','8강','16강','32강'][f] || `${Math.pow(2,f+1)}강`;
+}
+
+async function createRoom() {
+  if (!ensureName()) return;
+  const name = document.getElementById('roomNameInput').value.trim();
+  const isTest = isAdmin() && document.getElementById('testModeCheck').checked;
+  const game_type = isTest ? 'test' : document.getElementById('gameTypeSelect').value;
+  if (!name) return;
+
+  if (isTest) {
+    // 테스트 모드: 참가자 이름 입력받기
+    const input = prompt('참가자 이름을 쉼표로 구분해서 입력하세요 (최소 2명)\n예: 홍길동, 김철수, 이영희');
+    if (!input) return;
+    const names = input.split(',').map(n=>n.trim()).filter(Boolean);
+    if (names.length < 2) { alert('최소 2명 필요합니다'); return; }
+    const room = await api('POST', '/rooms', {name, game_type});
+    document.getElementById('roomNameInput').value = '';
+    for (const n of names) await api('POST', `/rooms/${room.room_id}/join`, {player: n});
+    const started = await api('POST', `/rooms/${room.room_id}/start`, {});
+    testMode = true;
+    testPlayers = names;
+    testTurnIdx = 0;
+    currentRoomId = started.room_id;
+    renderGamePage(started);
+    goTab('game');
+    return;
+  }
+
+  const room = await api('POST', '/rooms', {name, game_type});
+  document.getElementById('roomNameInput').value = '';
+  await api('POST', `/rooms/${room.room_id}/join`, {player: myName});
+  currentRoomId = room.room_id;
+  myChoice = null;
+  testMode = false;
+  await refreshGame();
+  goTab('game');
+}
+
+async function joinRoom(roomId) {
+  if (!ensureName()) return;
+  const res = await api('POST', `/rooms/${roomId}/join`, {player: myName});
+  if (res.error) { alert(res.error); return; }
+  currentRoomId = roomId;
+  myChoice = null;
+  renderGamePage(res);
+  goTab('game');
+}
+
+async function leaveRoom(roomId) {
+  if (!ensureName()) return;
+  const res = await api('POST', `/rooms/${roomId}/leave`, {player: myName});
+  if (res.error) { alert(res.error); return; }
+  if (currentRoomId === roomId) { currentRoomId = null; stopPoll(); }
+  loadRooms();
+}
+
+async function enterRoom(roomId) {
+  if (!ensureName()) return;
+  currentRoomId = roomId;
+  myChoice = null;
+  await refreshGame();
+  goTab('game');
+}
+
+async function refreshGame() {
+  if (!currentRoomId) return;
+  const room = await api('GET', `/rooms/${currentRoomId}`);
+  renderGamePage(room);
+}
+
+function renderGamePage(room) {
+  const el = document.getElementById('gameContent');
+
+  // 치토 배틀은 별도 페이지로
+  if (room.game_type === 'chito' && room.status === 'playing') {
+    stopPoll();
+    el.innerHTML = `
+      <div class="card" style="text-align:center;padding:30px">
+        <div style="font-size:2rem;margin-bottom:10px">⚔️</div>
+        <div style="font-size:1rem;font-weight:bold;margin-bottom:6px">${room.name}</div>
+        <div style="color:#888;font-size:0.82rem;margin-bottom:16px">치토 배틀 게임</div>
+        <a href="chito.html?room=${room.room_id}" target="_blank">
+          <button class="btn-p" style="font-size:1rem;padding:12px 28px">게임 시작 →</button>
+        </a>
+      </div>`;
+    return;
+  }
+
+  if (room.status === 'waiting') {
+    stopPoll();
+    const online = room.choices?.online || [];
+    const allReady = room.choices?.all_ready || false;
+    el.innerHTML = `
+      <div class="card" style="margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+        <div><div style="font-size:1rem;font-weight:bold">${room.name}</div>
+        <div style="color:#888;font-size:0.78rem">대기 중 · ${room.players.length}명 참가</div></div>
+        ${allReady ? `<button class="btn-g" onclick="startTournament('${room.room_id}')">토너먼트 시작</button>` : `<span style="color:#888;font-size:0.82rem">모든 참가자 대기 중...</span>`}
+      </div>
+      <div class="chips">${room.players.map(p=>`<div class="chip${p===myName?' me':''}${online.includes(p)?' ':' '}" style="${online.includes(p)?'border-color:#4caf50;color:#4caf50':'opacity:0.5'}">${displayName(p)}${p===myName?' (나)':''} ${online.includes(p)?'🟢':'⚫'}</div>`).join('')}</div>`;
+    startPoll(room.room_id);
+    return;
+  }
+
+  if (room.status === 'finished') {
+    stopPoll();
+    const champ = room.rounds[room.rounds.length-1][0]?.winner;
+    el.innerHTML = `
+      <div class="champ-box"><div class="trophy">🏆</div><div class="cname">${champ}</div>
+      <div style="color:#888;font-size:0.82rem;margin-top:4px">최종 우승자</div></div>
+      ${resultHTML(room.rounds)}`;
+    return;
+  }
+
+  // playing
+  const myMatch = testMode ? findNextTestMatch(room) : findMyMatch(room);
+  el.innerHTML = `
+    <div class="card" style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">
+      <div><div style="font-size:1rem;font-weight:bold">${room.name}${testMode?' <span style="color:#ffd700;font-size:0.78rem">[테스트]</span>':''}</div>
+      <div style="color:#888;font-size:0.78rem">진행 중${testMode?'':' · '+displayName(myName)}</div></div>
+      <button class="btn-r btn-s" onclick="forfeit('${room.room_id}')">🏳 포기</button>
+    </div>
+    <div style="margin-bottom:16px;overflow-x:auto">${bracketHTML(room)}</div>
+    <div id="gameArea">${myMatch ? matchHTML(myMatch, room) : '<div class="empty-msg">모든 경기 완료 대기 중...</div>'}</div>`;
+
+  setupVisibilityGuard(room.room_id);
+  startPoll(room.room_id);
+}
+
+async function forfeit(roomId) {
+  if (!confirm('정말 포기하시겠습니까? 상대방이 승리합니다.')) return;
+  await api('POST', `/rooms/${roomId}/forfeit`, {player: myName});
+  stopPoll();
+  currentRoomId = null;
+  goTab('lobby');
+}
+
+let visibilityGuardActive = false;
+function setupVisibilityGuard(roomId) {
+  if (visibilityGuardActive) return;
+  visibilityGuardActive = true;
+  document.addEventListener('visibilitychange', async () => {
+    if (document.hidden && currentRoomId === roomId) {
+      // 탭 이탈 → 자동 포기
+      await api('POST', `/rooms/${roomId}/forfeit`, {player: myName});
+      stopPoll();
+      currentRoomId = null;
+      visibilityGuardActive = false;
+    }
+  }, {once: true});
+}
+
+function findMyMatch(room) {
+  for (let ri = 0; ri < room.rounds.length; ri++) {
+    for (let mi = 0; mi < room.rounds[ri].length; mi++) {
+      const m = room.rounds[ri][mi];
+      if (!m.winner && m.p1 && m.p2 && (m.p1 === myName || m.p2 === myName))
+        return {match: m, ri, mi};
+    }
+  }
+  return null;
+}
+
+// 테스트 모드: 아직 선택 안 한 플레이어가 있는 첫 번째 경기
+function findNextTestMatch(room) {
+  const choices = room.choices || {};
+  for (let ri = 0; ri < room.rounds.length; ri++) {
+    for (let mi = 0; mi < room.rounds[ri].length; mi++) {
+      const m = room.rounds[ri][mi];
+      if (!m.winner && m.p1 && m.p2) {
+        const key = `${ri}_${mi}`;
+        // 아직 선택 안 한 플레이어가 있으면 이 경기
+        if (!choices[key]?.[m.p1] || !choices[key]?.[m.p2])
+          return {match: m, ri, mi};
+      }
+    }
+  }
+  return null;
+}
+
+function matchHTML({match, ri, mi}, room) {
+  const key = `${ri}_${mi}`;
+  const choices = room.choices || {};
+
+  // 테스트 모드: 순서대로 입력
+  if (testMode) {
+    const pendingPlayers = [match.p1, match.p2].filter(p => !choices[key]?.[p]);
+    const currentPlayer = pendingPlayers[0];
+    if (!currentPlayer) {
+      return `<div class="game-box"><div class="waiting-msg">처리 중...</div></div>`;
+    }
+    return `<div class="game-box">
+      <div style="color:#888;font-size:0.82rem">${rname(ri, room.rounds.length)} · ${mi+1}경기</div>
+      <div class="vs-row"><div class="pname">${match.p1}</div><div style="color:#555">VS</div><div class="pname">${match.p2}</div></div>
+      <div class="turn-label">${currentPlayer}의 선택</div>
+      <div class="rps-btns">${RPS.map(k=>`<button class="rps-btn" onclick="submitChoice('${k}',${ri},${mi},'${match.p1}','${match.p2}','${currentPlayer}')">${k}</button>`).join('')}</div>
+      <div style="color:#888;font-size:0.78rem;margin-top:6px">${choices[key]?.[match.p1===currentPlayer?match.p2:match.p1] ? '상대방 선택 완료 ✓' : ''}</div>
+    </div>`;
+  }
+
+  const myChoiceServer = choices[key]?.[myName];
+  const opponentName = match.p1 === myName ? match.p2 : match.p1;
+  const opponentChose = choices[key]?.[opponentName];
+
+  if (myChoiceServer) {
+    return `<div class="game-box">
+      <div style="color:#888;font-size:0.82rem">${rname(ri, room.rounds.length)} · ${mi+1}경기</div>
+      <div class="vs-row"><div class="pname">${match.p1}</div><div style="color:#555">VS</div><div class="pname">${match.p2}</div></div>
+      <div class="rps-btns">${RPS.map(k=>`<button class="rps-btn${k===myChoiceServer?' selected':''}" disabled>${k}</button>`).join('')}</div>
+      <div class="waiting-msg">✅ 선택 완료: ${myChoiceServer} · 상대방 대기 중...</div>
+    </div>`;
+  }
+
+  const html = `<div class="game-box">
+    <div style="color:#888;font-size:0.82rem">${rname(ri, room.rounds.length)} · ${mi+1}경기</div>
+    <div class="vs-row"><div class="pname">${match.p1}</div><div style="color:#555">VS</div><div class="pname">${match.p2}</div></div>
+    <div class="turn-label">내 선택 (${displayName(myName)})</div>
+    <div class="rps-btns">${RPS.map(k=>`<button class="rps-btn" onclick="submitChoice('${k}',${ri},${mi},'${match.p1}','${match.p2}')">${k}</button>`).join('')}</div>
+    <div class="result-msg" id="resultMsg">${opponentChose ? '상대방이 선택했습니다. 선택해주세요!' : ''}</div>
+    <div id="timeoutBar" style="margin-top:8px;height:4px;border-radius:2px;background:#2a2a4a;overflow:hidden">
+      <div id="timeoutFill" style="height:100%;background:#e05c5c;width:100%;transition:width 10s linear"></div>
+    </div>
+    <div style="font-size:0.72rem;color:#888;text-align:center;margin-top:2px">10초 내 선택하세요</div>
+  </div>`;
+  setTimeout(() => { const f=document.getElementById('timeoutFill'); if(f) f.style.width='0%'; }, 50);
+  if (window._timeoutTimer) clearTimeout(window._timeoutTimer);
+  window._timeoutTimer = setTimeout(async () => {
+    if (currentRoomId && !choices[key]?.[myName])
+      await api('POST', `/rooms/${currentRoomId}/forfeit`, {player: myName});
+  }, 10000);
+  return html;
+}
+
+async function submitChoice(choice, ri, mi, p1, p2, overridePlayer) {
+  const player = overridePlayer || myName;
+  const room = await api('POST', `/rooms/${currentRoomId}/choice`, {
+    round: ri, match: mi, player, choice
+  });
+  renderGamePage(room);
+}
+
+async function startTournament(roomId) {
+  const room = await api('POST', `/rooms/${roomId}/start`, {});
+  if (room.error) { alert(room.error); return; }
+  myChoice = null;
+  renderGamePage(room);
+}
+
+function bracketHTML(room) {
+  const {rounds, choices} = room;
+  return `<div>${rounds.map((round, ri) => `
+    <div class="b-round">
+      <div class="b-rtitle">${rname(ri, rounds.length)}</div>
+      <div class="b-row">${round.map((m,mi) => {
+        const key = `${ri}_${mi}`;
+        const c = choices||{};
+        const p1chose = c[key]?.[m.p1];
+        const p2chose = c[key]?.[m.p2];
+        const p1c = !m.p2?'bye':m.winner===m.p1?'winner':m.winner?'loser':p1chose?'choosing':'';
+        const p2c = !m.p1?'bye':m.winner===m.p2?'winner':m.winner?'loser':p2chose?'choosing':'';
+        return `<div class="b-match">
+          <div class="b-p ${p1c||(!m.p1?'empty':'')}">${m.p1||'TBD'}${p1chose&&!m.winner?' ✓':''}</div>
+          <div class="b-p ${p2c||(!m.p2?'empty':'')}">${m.p2||'TBD'}${p2chose&&!m.winner?' ✓':''}</div>
+        </div>`;
+      }).join('')}</div>
+    </div>`).join('')}</div>`;
+}
+
+function startPoll(roomId) {
+  stopPoll();
+  pollTimer = setInterval(async () => {
+    if (!currentRoomId || currentRoomId !== roomId) { stopPoll(); return; }
+    // heartbeat 전송
+    if (myName) await api('POST', `/rooms/${roomId}/ready`, {player: myName});
+    const room = await api('GET', `/rooms/${roomId}`);
+    renderGamePage(room);
+    if (room.status === 'finished') stopPoll();
+  }, 50);
+}
+
+function stopPoll() {
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+}
+
+if (myName) loadRooms();
+</script>
+</body>
+</html>
