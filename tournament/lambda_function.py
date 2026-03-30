@@ -105,8 +105,8 @@ def prop(rounds, ri, mi, winner):
 def init_chito_state(p1name, p2name, p1char=None, p2char=None):
     chars = list(CHITO_SKILLS.keys())
     return {
-        'p1': {'name': p1name, 'char': p1char or chars[0], 'hp': 100, 'mp': 100, 'x': 2, 'y': 3, 'dir': -1, 'queue': []},
-        'p2': {'name': p2name, 'char': p2char or chars[1], 'hp': 100, 'mp': 100, 'x': 2, 'y': 1, 'dir': 1, 'queue': []},
+        'p1': {'name': p1name, 'char': p1char or chars[0], 'hp': 100, 'mp': 100, 'x': 1, 'y': 3, 'dir': -1, 'queue': []},
+        'p2': {'name': p2name, 'char': p2char or chars[1], 'hp': 100, 'mp': 100, 'x': 1, 'y': 0, 'dir': 1, 'queue': []},
         'turn': 1, 'winner': None, 'log': [], 'phase': 'char_select'
     }
 
@@ -178,9 +178,10 @@ def chito_resolve(gs):
     """치토 배틀 턴 처리: 이동 먼저, 공격 나중"""
     p1, p2 = gs['p1'], gs['p2']
     log = []
-    GRID = 5
+    GW, GH = 3, 4
 
-    def clamp(v): return max(0, min(GRID-1, v))
+    def clamp_x(v): return max(0, min(GW-1, v))
+    def clamp_y(v): return max(0, min(GH-1, v))
     def in_range(attacker, target, skill_range):
         d = attacker['dir']
         for dx, dy in skill_range:
@@ -192,8 +193,8 @@ def chito_resolve(gs):
     for p, other in [(p1,p2),(p2,p1)]:
         for card in p['queue']:
             if card['type'] == 'move':
-                nx = clamp(p['x'] + card['dx'])
-                ny = clamp(p['y'] + card['dy'] * p['dir'])
+                nx = clamp_x(p['x'] + card['dx'])
+                ny = clamp_y(p['y'] + card['dy'] * p['dir'])
                 if nx != other['x'] or ny != other['y']:
                     p['x'], p['y'] = nx, ny
                     log.append(f"{p['name']} {card['name']}")

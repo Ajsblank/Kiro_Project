@@ -6,19 +6,19 @@
 <title>⚔️ 치토 배틀</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: #0f0f1a; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; min-height: 100vh; }
+body { background: #0a0a12; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; min-height: 100vh; }
 .wrap { max-width: 680px; margin: 0 auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
 button { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.88rem; transition: all 0.2s; }
 .btn-p { background: #7c83fd; color: #fff; } .btn-p:hover { background: #5a63f5; }
 .btn-s { padding: 5px 11px; font-size: 0.78rem; background: #2a2a4a; color: #ccc; border: 1px solid #3a3a5a; }
 input[type=text] { padding: 8px 12px; background: #0f0f1a; border: 1px solid #3a3a5a; border-radius: 6px; color: #e0e0e0; font-size: 0.88rem; }
 input:focus { outline: none; border-color: #7c83fd; }
-.card { background: #1a1a2e; border: 1px solid #2a2a4a; border-radius: 10px; padding: 12px 16px; }
+.card { background: #161625; border: 1px solid #2a2a4a; border-radius: 10px; padding: 12px 16px; }
 
 /* STATUS */
 .status-row { display: flex; gap: 8px; }
-.pstat { flex: 1; background: #1a1a2e; border: 1px solid #2a2a4a; border-radius: 8px; padding: 10px 12px; }
-.pstat.me { border-color: #7c83fd; }
+.pstat { flex: 1; background: #1c1c2e; border: 1px solid #2a2a4a; border-radius: 8px; padding: 10px 12px; }
+.pstat.me { border-color: #7c83fd; box-shadow: 0 0 10px rgba(124, 131, 253, 0.2); }
 .pname { font-weight: bold; font-size: 0.88rem; margin-bottom: 5px; }
 .bar { height: 7px; border-radius: 4px; background: #2a2a4a; overflow: hidden; margin-bottom: 3px; }
 .bar-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
@@ -26,10 +26,17 @@ input:focus { outline: none; border-color: #7c83fd; }
 .bval { font-size: 0.7rem; color: #888; }
 
 /* GRID */
-.grid { display: grid; grid-template-columns: repeat(5, 50px); grid-template-rows: repeat(5, 50px); gap: 2px; margin: 0 auto; }
-.cell { width: 50px; height: 50px; background: #1a1a2e; border: 1px solid #2a2a4a; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; }
-.cell.p1c { background: #1a2a4a; border-color: #5c9ae0; }
-.cell.p2c { background: #2a1a1a; border-color: #e05c5c; }
+.grid { display: grid; grid-template-columns: repeat(4, 60px); grid-template-rows: repeat(3, 60px); gap: 4px; margin: 0 auto; background: #1a1a2e; padding: 8px; border-radius: 8px; border: 2px solid #2a2a4a; }
+.cell { width: 60px; height: 60px; background: #252545; border: 1px solid #3a3a5a; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; transition: all 0.3s; position: relative; overflow: hidden; }
+.cell.p1c { background: #2a3a5a; border-color: #5c9ae0; box-shadow: inset 0 0 15px rgba(92, 154, 224, 0.3); }
+.cell.p2c { background: #3a2a2a; border-color: #e05c5c; box-shadow: inset 0 0 15px rgba(224, 92, 92, 0.3); }
+
+/* ANIMATIONS */
+@keyframes flash-red { 0% { background: #6a1a1a; } 100% { background: #252545; } }
+@keyframes flash-green { 0% { background: #1a4a1a; } 100% { background: #252545; } }
+.fx-hit { animation: flash-red 0.6s ease-out; }
+.fx-move { animation: flash-green 0.6s ease-out; }
+.player-token { transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
 
 /* CARDS */
 .section-label { font-size: 0.72rem; color: #888; margin-bottom: 4px; }
@@ -71,8 +78,8 @@ input:focus { outline: none; border-color: #7c83fd; }
 <div class="wrap" id="app"><div class="waiting">로딩 중...</div></div>
 
 <script>
-const API = 'https://8odj4wd9zc.execute-api.us-east-1.amazonaws.com/prod';
-const CHARS = ["팔달 치토","다산관 치토","원천 치토","율곡 치토","연암 치토","성호 치토","용지 치토","아주대 본관 치토"];
+const API = 'http://localhost:5000';
+const CHARS = ["팔달 치토","다산관 치토","원천 치토","율곡 치토","연암 치토","성호 치토","용지 치토","남제 치토"];
 const SKILLS = {
   "팔달 치토":[{name:"팔달 강타",power:30,cost:25,range:[[0,1]]},{name:"팔달 폭풍",power:50,cost:50,range:[[-1,0],[1,0],[0,1],[0,-1]]},{name:"팔달 돌진",power:25,cost:25,range:[[-1,1],[0,1],[1,1]]},{name:"팔달 회전베기",power:25,cost:35,range:[[0,1],[1,0]]},{name:"팔달 찌르기",power:15,cost:15,range:[[0,1]]}],
   "다산관 치토":[{name:"다산 일격",power:50,cost:50,range:[[0,1]]},{name:"다산 지식파동",power:15,cost:15,range:[[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]]},{name:"다산 직진공격",power:25,cost:15,range:[[0,1],[0,2]]},{name:"다산 견제",power:25,cost:25,range:[[0,1]]},{name:"다산 기본타",power:15,cost:15,range:[[0,1]]}],
@@ -87,7 +94,7 @@ const MOVES = [{name:'↑ 앞',dx:0,dy:-1},{name:'↓ 뒤',dx:0,dy:1},{name:'←
 
 const params = new URLSearchParams(location.search);
 const roomId = params.get('room');
-const myName = localStorage.getItem('myName') || '';
+const myName = params.get('name') || localStorage.getItem('myName') || '';
 let myQueue = [];
 let submitted = false;
 let pollTimer = null;
@@ -124,7 +131,45 @@ async function poll() {
       myQueue = [];
       submitted = false;
     }
-    render(gs, room);
+    // 효과 연출 후 렌더링
+    if (lastGs && gs.turn > lastGs.turn) {
+      applyEffects(gs, room).then(() => render(gs, room));
+    } else {
+      render(gs, room);
+    }
+  }
+}
+
+async function applyEffects(gs, room) {
+  const newLogs = gs.log.filter(l => !lastGs.log.includes(l));
+  // 로그 역순 (최신이 위이므로 아래부터 실행)
+  const logsToPlay = [...newLogs].reverse();
+  
+  for (const log of logsToPlay) {
+    if (log.includes('데미지') || log.includes('빗나감')) {
+      const isP1 = log.startsWith(gs.p1.name);
+      const attacker = isP1 ? gs.p1 : gs.p2;
+      const charSkills = SKILLS[attacker.char] || [];
+      const skillName = log.split('→')[1].split(' ')[0];
+      const skill = charSkills.find(s => s.name === skillName);
+      
+      if (skill) {
+        for (const [dx, dy] of skill.range) {
+          const tx = attacker.x + dx;
+          const ty = attacker.y + dy * attacker.dir;
+          const el = document.getElementById(`cell-${tx}-${ty}`);
+          if (el) { el.classList.add('fx-hit'); setTimeout(() => el.classList.remove('fx-hit'), 600); }
+        }
+        await new Promise(r => setTimeout(r, 400));
+      }
+    } else if (log.includes('↑') || log.includes('↓') || log.includes('←') || log.includes('→')) {
+      // 이동 효과는 간단한 하이라이트로 처리 (실제 위치는 최종 렌더링에서 변경됨)
+      const name = log.split(' ')[0];
+      const p = gs.p1.name === name ? gs.p1 : gs.p2;
+      const el = document.getElementById(`cell-${p.x}-${p.y}`);
+      if (el) { el.classList.add('fx-move'); setTimeout(() => el.classList.remove('fx-move'), 600); }
+      await new Promise(r => setTimeout(r, 300));
+    }
   }
 }
 
@@ -172,13 +217,13 @@ function statHTML(p, isMe) {
 
 function gridHTML(gs) {
   let html = '<div class="grid">';
-  for (let y = 0; y < 5; y++) {
-    for (let x = 0; x < 5; x++) {
+  for (let y = 0; y < 3; y++) {
+    for (let x = 0; x < 4; x++) {
       let cls = 'cell';
       let content = '';
-      if (gs.p1.x===x&&gs.p1.y===y) { cls+=' p1c'; content='🔵'; }
-      else if (gs.p2.x===x&&gs.p2.y===y) { cls+=' p2c'; content='🔴'; }
-      html += `<div class="${cls}">${content}</div>`;
+      if (gs.p1.x===x&&gs.p1.y===y) { cls+=' p1c'; content='<span class="player-token">🔵</span>'; }
+      else if (gs.p2.x===x&&gs.p2.y===y) { cls+=' p2c'; content='<span class="player-token">🔴</span>'; }
+      html += `<div class="${cls}" id="cell-${x}-${y}">${content}</div>`;
     }
   }
   return html + '</div>';

@@ -108,7 +108,7 @@ select option { background: #1a1a2e; }
         <option value="chito">⚔️ 치토 배틀</option>
       </select>
       <span id="testModeWrap" style="display:none;align-items:center;gap:5px;font-size:0.82rem;color:#ffd700">
-        <input type="checkbox" id="testModeCheck"> 테스트 모드
+        <input type="checkbox" id="testModeCheck"> 1인 시뮬레이션 (혼자서 전체 테스트)
       </span>
       <button class="btn-p" onclick="createRoom()">방 만들기</button>
     </div>
@@ -137,7 +137,7 @@ select option { background: #1a1a2e; }
 </div>
 
 <script>
-const API = 'https://8odj4wd9zc.execute-api.us-east-1.amazonaws.com/prod';
+const API = 'http://localhost:5000';
 const RPS = ['✊','✌️','🖐️'];
 function rpsLabel(s){ return {'✊':'주먹','✌️':'가위','🖐️':'보'}[s]||s; }
 
@@ -145,15 +145,14 @@ let myName = localStorage.getItem('myName') || '';
 let currentRoomId = null;
 let pollTimer = null;
 let myChoice = null;
-let testMode = false;       // 테스트 모드 여부
-let testPlayers = [];       // 테스트 모드 참가자 목록
+let testMode = false;       // 시뮬레이션 모드 여부
+let testPlayers = [];       // 시뮬레이션 모드 참가자 목록
 let testTurnIdx = 0;        // 현재 입력 차례 인덱스
 
-const isAdmin = () => myName.endsWith('_admin');
-const displayName = (n) => n.endsWith('_admin') ? n.slice(0, -6) : n;
+const displayName = (n) => n;
 
 function updateNameBanner() {
-  document.getElementById('myNameDisplay').textContent = displayName(myName) + (isAdmin() ? ' 👑' : '') || '(미설정)';
+  document.getElementById('myNameDisplay').textContent = displayName(myName) || '(미설정)';
 }
 
 function submitInitName() {
@@ -196,7 +195,7 @@ function goTab(id) {
   const tabs = ['lobby','game','finished','profile'];
   document.querySelectorAll('nav button')[tabs.indexOf(id)].classList.add('active');
   if (id === 'lobby') {
-    document.getElementById('testModeWrap').style.display = isAdmin() ? 'flex' : 'none';
+    document.getElementById('testModeWrap').style.display = 'flex';
     loadRooms();
   }
   if (id === 'finished') loadFinished();
@@ -204,12 +203,23 @@ function goTab(id) {
 }
 
 async function api(method, path, body) {
-  const r = await fetch(API + path, {
-    method,
-    headers: {'Content-Type': 'application/json'},
-    body: (body !== undefined) ? JSON.stringify(body) : undefined
-  });
-  return r.json();
+  try {
+    const r = await fetch(API + path, {
+      method,
+      headers: {'Content-Type': 'application/json'},
+      body: (body !== undefined) ? JSON.stringify(body) : undefined
+    });
+    const res = await r.json();
+    if (!r.ok) {
+      alert('서버 에러: ' + (res.error || r.statusText));
+      return {error: true};
+    }
+    return res;
+  } catch (e) {
+    console.error(e);
+    alert('연결 실패: 서버가 실행 중인지 확인하세요. (http://localhost:5000)');
+    return {error: true};
+  }
 }
 
 async function loadRooms() {
@@ -224,17 +234,15 @@ async function loadRooms() {
           ? `<button class="btn-r btn-s" onclick="leaveRoom('${r.room_id}')">참가취소</button>`
           : `<button class="btn-s" onclick="joinRoom('${r.room_id}')">참가</button>`)
       : `<button class="btn-s" onclick="enterRoom('${r.room_id}')">입장</button>`;
-    const delBtn = isAdmin() ? `<button class="btn-r btn-s" onclick="deleteRoom('${r.room_id}')">삭제</button>` : '';
-    const testTag = r.game_type === 'test' ? ' <span style="color:#ffd700;font-size:0.72rem">[테스트]</span>' : '';
+    const delBtn = `<button class="btn-r btn-s" onclick="deleteRoom('${r.room_id}')">방 삭제</button>`;
+    const testTag = (r.game_type === 'test_rps' || r.game_type === 'test_chito') ? ' <span style="color:#ffd700;font-size:0.72rem">[시뮬레이션]</span>' : '';
     return `<div class="card room-card">
-      <div style="display:flex;gap:6px;align-items:center">
-        ${delBtn}
-      </div>
       <div style="flex:1">
-        <div class="room-name">${r.name}${testTag} <span style="color:#888;font-size:0.75rem">[${{'rps':'가위바위보','test':'가위바위보','chito':'치토 배틀'}[r.game_type]||r.game_type}]</span></div>
+        <div class="room-name">${r.name}${testTag} <span style="color:#888;font-size:0.75rem">[${{'rps':'가위바위보','test_rps':'가위바위보','test_chito':'치토 배틀','chito':'치토 배틀'}[r.game_type]||r.game_type}]</span></div>
         <div class="room-meta">참가자 ${r.players.length}명 · ${r.room_id}</div>
       </div>
       <div style="display:flex;gap:6px;align-items:center">
+        ${delBtn}
         <span class="badge ${r.status==='waiting'?'bw':r.status==='playing'?'bp':'bf'}">${{waiting:'대기중',playing:'진행중',finished:'종료'}[r.status]}</span>
         ${rightBtns}
       </div>
@@ -295,30 +303,40 @@ function rname(ri, total) {
 async function createRoom() {
   if (!ensureName()) return;
   const name = document.getElementById('roomNameInput').value.trim();
-  const isTest = isAdmin() && document.getElementById('testModeCheck').checked;
+  const isTest = document.getElementById('testModeCheck').checked;
   const game_type = isTest ? 'test' : document.getElementById('gameTypeSelect').value;
   if (!name) return;
 
   if (isTest) {
-    // 테스트 모드: 참가자 이름 입력받기
-    const input = prompt('참가자 이름을 쉼표로 구분해서 입력하세요 (최소 2명)\n예: 홍길동, 김철수, 이영희');
+    // 시뮬레이션 모드: 참가자 이름 입력받기
+    const input = prompt('참가자 이름을 쉼표로 구분해서 입력하세요 (최소 2명)\n예: 치토1, 치토2, 치토3');
     if (!input) return;
     const names = input.split(',').map(n=>n.trim()).filter(Boolean);
     if (names.length < 2) { alert('최소 2명 필요합니다'); return; }
-    const room = await api('POST', '/rooms', {name, game_type});
+    
+    // 시뮬레이션 타입 세분화
+    const simType = document.getElementById('gameTypeSelect').value === 'chito' ? 'test_chito' : 'test_rps';
+    const room = await api('POST', '/rooms', {name, game_type: simType});
+    if (room.error) { alert(room.error); return; }
+    
     document.getElementById('roomNameInput').value = '';
-    for (const n of names) await api('POST', `/rooms/${room.room_id}/join`, {player: n});
+    for (const n of names) {
+      await api('POST', `/rooms/${room.room_id}/join`, {player: n});
+    }
     const started = await api('POST', `/rooms/${room.room_id}/start`, {});
+    
     testMode = true;
     testPlayers = names;
     testTurnIdx = 0;
-    currentRoomId = started.room_id;
+    currentRoomId = room.room_id;
     renderGamePage(started);
     goTab('game');
     return;
   }
 
   const room = await api('POST', '/rooms', {name, game_type});
+  if (room.error) { alert(room.error); return; }
+  
   document.getElementById('roomNameInput').value = '';
   await api('POST', `/rooms/${room.room_id}/join`, {player: myName});
   currentRoomId = room.room_id;
@@ -363,17 +381,29 @@ async function refreshGame() {
 function renderGamePage(room) {
   const el = document.getElementById('gameContent');
 
-  // 치토 배틀은 별도 페이지로
-  if (room.game_type === 'chito' && room.status === 'playing') {
+  // 치토 배틀 화면 (일반 및 시뮬레이션 공통)
+  const isChitoType = room.game_type === 'chito' || room.game_type === 'test_chito';
+  if (isChitoType && room.status === 'playing') {
     stopPoll();
+    const myMatch = findNextTestMatch(room);
+    const simLinks = (room.game_type === 'test_chito' && myMatch) ? `
+      <div style="margin-top:15px; border-top:1px solid #333; padding-top:15px">
+        <div style="font-size:0.8rem;color:#888;margin-bottom:8px">1인 시뮬레이션: 두 명의 역할을 각각 탭으로 띄웁니다.</div>
+        <div style="display:flex; gap:10px; justify-content:center">
+          <a href="chito.html?room=${room.room_id}&name=${myMatch.match.p1}" target="_blank"><button class="btn-s">${myMatch.match.p1}로 접속</button></a>
+          <a href="chito.html?room=${room.room_id}&name=${myMatch.match.p2}" target="_blank"><button class="btn-s">${myMatch.match.p2}로 접속</button></a>
+        </div>
+      </div>` : '';
+
     el.innerHTML = `
       <div class="card" style="text-align:center;padding:30px">
         <div style="font-size:2rem;margin-bottom:10px">⚔️</div>
         <div style="font-size:1rem;font-weight:bold;margin-bottom:6px">${room.name}</div>
-        <div style="color:#888;font-size:0.82rem;margin-bottom:16px">치토 배틀 게임</div>
+        <div style="color:#888;font-size:0.82rem;margin-bottom:16px">${room.game_type==='test_chito'?'치토 배틀 시뮬레이션':'치토 배틀 게임'}</div>
         <a href="chito.html?room=${room.room_id}" target="_blank">
-          <button class="btn-p" style="font-size:1rem;padding:12px 28px">게임 시작 →</button>
+          <button class="btn-p" style="font-size:1rem;padding:12px 28px">내 이름으로 시작 →</button>
         </a>
+        ${simLinks}
       </div>`;
     return;
   }
